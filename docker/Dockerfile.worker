@@ -1,0 +1,32 @@
+# ─── Stage 1: Build ────────────────────────────────────────────────────────
+FROM node:24-alpine AS builder
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
+COPY nx.json tsconfig.base.json ./
+COPY apps/worker ./apps/worker
+COPY libs ./libs
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm exec nx build worker --configuration=production
+
+# ─── Stage 2: Runtime ──────────────────────────────────────────────────────
+FROM node:24-alpine AS runtime
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY --from=builder /app/dist/apps/worker ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+
+ENV NODE_ENV=production
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD pgrep -f "node dist/main.js" || exit 1
+
+CMD ["node", "dist/main.js"]

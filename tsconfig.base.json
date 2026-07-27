@@ -1,0 +1,27 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2020",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": false,
+    "paths": {
+      "@neet-ai-platform/types": ["./libs/shared/types/src/index.ts"],
+      "@neet-ai-platform/constants": ["./libs/shared/constants/src/index.ts"],
+      "@neet-ai-platform/validators": ["./libs/shared/validators/src/index.ts"],
+      "@neet-ai/shared/types": ["./libs/shared/types/src/index.ts"],
+      "@neet-ai/shared/constants": ["./libs/shared/constants/src/index.ts"],
+      "@neet-ai/shared/validators": ["./libs/shared/validators/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

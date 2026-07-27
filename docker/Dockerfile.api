@@ -1,0 +1,43 @@
+# ─── Stage 1: Build ────────────────────────────────────────────────────────
+FROM node:24-alpine AS builder
+
+WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy workspace manifests
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
+COPY nx.json tsconfig.base.json ./
+
+# Copy app and shared lib sources
+COPY apps/api ./apps/api
+COPY libs ./libs
+
+# Install all dependencies
+RUN pnpm install --frozen-lockfile
+
+# Build the api app
+RUN pnpm exec nx build api --configuration=production
+
+# ─── Stage 2: Runtime ──────────────────────────────────────────────────────
+FROM node:24-alpine AS runtime
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy only production artifacts
+COPY --from=builder /app/dist/apps/api ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+
+ENV NODE_ENV=production
+ENV PORT=3001
+
+EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:3001/api/v1/health || exit 1
+
+CMD ["node", "dist/main.js"]

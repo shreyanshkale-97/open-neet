@@ -1,0 +1,449 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────
+
+enum Role {
+  STUDENT
+  ADMIN
+  CONTENT_MANAGER
+  AI_REVIEWER
+  SUPPORT
+  ANALYST
+}
+
+enum QuestionType {
+  SINGLE_CORRECT
+  MULTIPLE_CORRECT
+  ASSERTION_REASON
+  INTEGER
+  MATCH_FOLLOWING
+  DIAGRAM
+}
+
+enum QuestionSource {
+  NCERT
+  AI_GENERATED
+  PREVIOUS_YEAR
+  TEACHER
+  STUDENT_NOTES
+  BOOK
+  YOUTUBE
+}
+
+enum QuestionStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum TestType {
+  OWN_PAPER
+  FULL_MOCK
+  CUSTOM
+}
+
+enum TestStatus {
+  CREATED
+  IN_PROGRESS
+  SUBMITTED
+  EVALUATED
+  ABANDONED
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  OCR
+  CHUNKING
+  EMBEDDING
+  READY
+  FAILED
+}
+
+enum AiJobStatus {
+  QUEUED
+  VALIDATING
+  OCR
+  CHUNKING
+  EMBEDDING
+  RETRIEVING
+  GENERATING
+  AI_VALIDATING
+  STORING
+  COMPLETED
+  FAILED
+  DEAD_LETTER
+}
+
+enum JobType {
+  DOCUMENT_PROCESSING
+  QUESTION_GENERATION
+  OCR
+  EMBEDDING
+  REPORT_GENERATION
+}
+
+enum FeatureFlag {
+  AI_TUTOR
+  ADAPTIVE_TEST
+  LEADERBOARD
+  VOICE_MODE
+  OWN_PAPER_MODE
+  YOUTUBE_RAG
+}
+
+// ─── Models (20 Tables) ───────────────────────────────────────────────────
+
+model Profile {
+  id             String    @id @default(uuid())
+  authUserId     String    @unique
+  fullName       String
+  email          String    @unique
+  role           Role      @default(STUDENT)
+  targetNeetYear Int?
+  avatarUrl      String?
+  isSuspended    Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  studyStats     StudyStats?
+  tests          Test[]
+  studentAnswers StudentAnswer[]
+  documents      Document[]
+  aiJobs         AiJob[]
+  aiCostLogs     AiCostLog[]
+  auditLogs      AuditLog[]
+
+  @@map("profiles")
+}
+
+model StudyStats {
+  id               String   @id @default(uuid())
+  profileId        String   @unique
+  profile          Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  studyStreakDays  Int      @default(0)
+  totalStudyHours  Float    @default(0)
+  totalTestsTaken  Int      @default(0)
+  lastActiveAt     DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("study_stats")
+}
+
+model Subject {
+  id           String     @id @default(uuid())
+  name         String     @unique
+  displayOrder Int
+  createdAt    DateTime   @default(now())
+
+  units        Unit[]
+  questions    Question[]
+  chunks       Chunk[]
+
+  @@map("subjects")
+}
+
+model Unit {
+  id           String     @id @default(uuid())
+  subjectId    String
+  subject      Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  name         String
+  displayOrder Int
+  createdAt    DateTime   @default(now())
+
+  topics       Topic[]
+  questions    Question[]
+  chunks       Chunk[]
+
+  @@index([subjectId])
+  @@map("units")
+}
+
+model Topic {
+  id           String     @id @default(uuid())
+  unitId       String
+  unit         Unit       @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  name         String
+  displayOrder Int
+  createdAt    DateTime   @default(now())
+
+  questions    Question[]
+  chunks       Chunk[]
+
+  @@index([unitId])
+  @@map("topics")
+}
+
+model Question {
+  id            String         @id @default(uuid())
+  subjectId     String
+  unitId        String
+  topicId       String
+  questionText  String
+  difficulty    Int            @default(5)
+  questionType  QuestionType   @default(SINGLE_CORRECT)
+  correctOption String
+  explanation   String
+  source        QuestionSource @default(AI_GENERATED)
+  imageUrl      String?
+  status        QuestionStatus @default(PENDING_REVIEW)
+  createdBy     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  subject       Subject        @relation(fields: [subjectId], references: [id])
+  unit          Unit           @relation(fields: [unitId], references: [id])
+  topic         Topic          @relation(fields: [topicId], references: [id])
+
+  options       QuestionOption[]
+  versions      QuestionVersion[]
+  testQuestions TestQuestion[]
+  studentAnswers StudentAnswer[]
+  embedding     Embedding?
+
+  @@index([subjectId, difficulty, status])
+  @@index([topicId, status])
+  @@index([source, status])
+  @@map("questions")
+}
+
+model QuestionOption {
+  id          String   @id @default(uuid())
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  optionLabel String
+  optionText  String
+
+  @@index([questionId])
+  @@map("question_options")
+}
+
+model QuestionVersion {
+  id            String   @id @default(uuid())
+  questionId    String
+  question      Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  questionText  String
+  correctOption String
+  explanation   String
+  changedBy     String?
+  createdAt     DateTime @default(now())
+
+  @@index([questionId])
+  @@map("question_versions")
+}
+
+model Document {
+  id           String         @id @default(uuid())
+  profileId    String
+  profile      Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title        String
+  fileType     String
+  storagePath  String
+  fileSizeBytes Int
+  status       DocumentStatus @default(PENDING)
+  errorMessage String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  chunks       Chunk[]
+
+  @@index([profileId])
+  @@map("documents")
+}
+
+model Chunk {
+  id            String     @id @default(uuid())
+  documentId    String
+  document      Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkText     String
+  pageNumber    Int?
+  chunkPosition Int
+  tokenCount    Int
+  subjectId     String?
+  subject       Subject?   @relation(fields: [subjectId], references: [id])
+  unitId        String?
+  unit          Unit?      @relation(fields: [unitId], references: [id])
+  topicId       String?
+  topic         Topic?     @relation(fields: [topicId], references: [id])
+  difficulty    Int?
+  source        String?
+  createdAt     DateTime   @default(now())
+
+  embedding     Embedding?
+
+  @@index([documentId])
+  @@index([subjectId, topicId])
+  @@map("chunks")
+}
+
+model Embedding {
+  id         String                 @id @default(uuid())
+  chunkId    String?                @unique
+  chunk      Chunk?                 @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+  questionId String?                @unique
+  question   Question?              @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  vector     Unsupported("vector(1536)")
+  model      String                 @default("text-embedding-004")
+  createdAt  DateTime               @default(now())
+
+  @@map("embeddings")
+}
+
+model Test {
+  id              String          @id @default(uuid())
+  userId          String
+  user            Profile         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testType        TestType
+  difficulty      Int?
+  totalQuestions  Int
+  durationMinutes Int
+  status          TestStatus      @default(CREATED)
+  startedAt       DateTime?
+  submittedAt     DateTime?
+  endTime         DateTime?
+  createdAt       DateTime        @default(now())
+
+  testQuestions   TestQuestion[]
+  studentAnswers  StudentAnswer[]
+  result          Result?
+  report          Report?
+
+  @@index([userId, status])
+  @@map("tests")
+}
+
+model TestQuestion {
+  id            String   @id @default(uuid())
+  testId        String
+  test          Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  questionId    String
+  question      Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionOrder Int
+
+  @@index([testId])
+  @@map("test_questions")
+}
+
+model StudentAnswer {
+  id              String    @id @default(uuid())
+  testId          String
+  test            Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  userId          String
+  user            Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId      String
+  question        Question  @relation(fields: [questionId], references: [id])
+  selectedOption  String?
+  isCorrect       Boolean?
+  markedForReview Boolean   @default(false)
+  visited         Boolean   @default(false)
+  answeredAt      DateTime?
+
+  @@index([testId])
+  @@index([userId])
+  @@map("student_answers")
+}
+
+model Result {
+  id               String   @id @default(uuid())
+  testId           String   @unique
+  test             Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  score            Int
+  maxScore         Int
+  correct          Int
+  wrong            Int
+  skipped          Int
+  accuracy         Float
+  negativeMarks    Int
+  timeTakenSeconds Int
+  createdAt        DateTime @default(now())
+
+  @@map("results")
+}
+
+model Report {
+  id               String   @id @default(uuid())
+  testId           String   @unique
+  test             Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  subjectBreakdown Json
+  topicBreakdown   Json
+  weakTopics       Json
+  strongTopics     Json
+  createdAt        DateTime @default(now())
+
+  @@map("reports")
+}
+
+model AiJob {
+  id          String      @id @default(uuid())
+  userId      String
+  user        Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobType     JobType
+  status      AiJobStatus @default(QUEUED)
+  progress    Int         @default(0)
+  currentStep String?
+  result      Json?
+  error       String?
+  retryCount  Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([userId, status])
+  @@map("ai_jobs")
+}
+
+model AiCostLog {
+  id               String   @id @default(uuid())
+  userId           String?
+  user             Profile? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  model            String
+  promptTokens     Int
+  outputTokens     Int
+  totalTokens      Int
+  estimatedCostUsd Decimal  @db.Decimal(10, 6)
+  responseTimeMs   Int
+  operation        String
+  createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([model, createdAt])
+  @@map("ai_cost_log")
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  adminId       String
+  admin         Profile  @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action        String
+  targetTable   String?
+  targetId      String?
+  previousValue String?
+  newValue      String?
+  ipAddress     String?
+  createdAt     DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@map("audit_logs")
+}
+
+model FeatureFlagRecord {
+  id         String      @id @default(uuid())
+  flag       FeatureFlag @unique
+  enabled    Boolean     @default(false)
+  rolloutPct Int         @default(0)
+  updatedBy  String?
+  updatedAt  DateTime    @updatedAt
+
+  @@map("feature_flags")
+}
