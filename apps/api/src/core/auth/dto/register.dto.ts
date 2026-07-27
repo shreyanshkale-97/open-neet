@@ -1,4 +1,5 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsOptional, IsInt } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, IsOptional, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Must be a valid email address' })
@@ -15,6 +16,7 @@ export class RegisterDto {
   fullName!: string;
 
   @IsOptional()
-  @IsInt()
+  @Type(() => Number)
+  @IsNumber()
   targetYear?: number;
 }
