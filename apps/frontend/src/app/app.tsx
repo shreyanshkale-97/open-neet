@@ -1,50 +1,80 @@
-// Uncomment this line to use CSS modules
-// import styles from './app.module.css';
-import NxWelcome from './nx-welcome';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Navbar } from '../components/Navbar';
+import { LandingPage } from '../pages/LandingPage';
+import { LoginPage } from '../pages/LoginPage';
+import { RegisterPage } from '../pages/RegisterPage';
+import { DashboardPage } from '../pages/DashboardPage';
+import { AiGeneratorPage } from '../pages/AiGeneratorPage';
+import { TestInterfacePage } from '../pages/TestInterfacePage';
+import { TestResultPage } from '../pages/TestResultPage';
+import { OwnPaperModePage } from '../pages/OwnPaperModePage';
+import { AdminDashboardPage } from '../pages/AdminDashboardPage';
 
-import { Route, Routes, Link } from 'react-router-dom';
+const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (adminOnly && user.role !== 'ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 export function App() {
   return (
-    <div>
-      <NxWelcome title="frontend" />
-
-      {/* START: routes */}
-      {/* These routes and navigation have been generated for you */}
-      {/* Feel free to move and update them to fit your needs */}
-      <br />
-      <hr />
-      <br />
-      <div role="navigation">
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/page-2">Page 2</Link>
-          </li>
-        </ul>
-      </div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-dark)' }}>
+      <Navbar />
       <Routes>
-        <Route
-          path="/"
-          element={
-            <div>
-              This is the generated root route.{' '}
-              <Link to="/page-2">Click here for page 2.</Link>
-            </div>
-          }
-        />
-        <Route
-          path="/page-2"
-          element={
-            <div>
-              <Link to="/">Click here to go back to root page.</Link>
-            </div>
-          }
-        />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/ai-generator" element={
+          <ProtectedRoute>
+            <AiGeneratorPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/own-paper" element={
+          <ProtectedRoute>
+            <OwnPaperModePage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/test/:id" element={
+          <ProtectedRoute>
+            <TestInterfacePage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/test/:id/result" element={
+          <ProtectedRoute>
+            <TestResultPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin" element={
+          <ProtectedRoute adminOnly>
+            <AdminDashboardPage />
+          </ProtectedRoute>
+        } />
       </Routes>
-      {/* END: routes */}
     </div>
   );
 }
