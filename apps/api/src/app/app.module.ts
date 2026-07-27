@@ -1,4 +1,5 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppConfigModule } from '../infrastructure/config/config.module';
 import { PrismaModule } from '../infrastructure/database/prisma.module';
 import { CacheModule } from '../infrastructure/cache/cache.module';
@@ -7,6 +8,10 @@ import { AppQueueModule } from '../infrastructure/queue/queue.module';
 import { FeatureFlagsModule } from '../infrastructure/feature-flags/feature-flags.module';
 import { ObservabilityModule } from '../infrastructure/observability/observability.module';
 import { AuditModule } from '../infrastructure/audit/audit.module';
+import { AuthModule } from '../core/auth/auth.module';
+import { UsersModule } from '../core/users/users.module';
+import { GlobalExceptionFilter } from '../infrastructure/common/filters/global-exception.filter';
+import { ResponseInterceptor } from '../infrastructure/common/interceptors/response.interceptor';
 import { HealthController } from '../health/health.controller';
 import { AppService } from './app.service';
 
@@ -20,8 +25,20 @@ import { AppService } from './app.service';
     FeatureFlagsModule,
     ObservabilityModule,
     AuditModule,
+    AuthModule,
+    UsersModule,
   ],
   controllers: [HealthController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
+  ],
 })
 export class AppModule {}
