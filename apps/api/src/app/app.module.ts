@@ -12,6 +12,7 @@ import { AuthModule } from '../core/auth/auth.module';
 import { UsersModule } from '../core/users/users.module';
 import { QuestionsModule } from '../learning/questions/questions.module';
 import { StorageModule } from '../core/storage/storage.module';
+import { AiModule } from '../ai/ai.module';
 import { GlobalExceptionFilter } from '../infrastructure/common/filters/global-exception.filter';
 import { ResponseInterceptor } from '../infrastructure/common/interceptors/response.interceptor';
 import { HealthController } from '../health/health.controller';
@@ -31,6 +32,7 @@ import { AppService } from './app.service';
     UsersModule,
     QuestionsModule,
     StorageModule,
+    AiModule,
   ],
   controllers: [HealthController],
   providers: [
