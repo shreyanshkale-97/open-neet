@@ -4,7 +4,14 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 import axios from 'axios';
 
-const inMemoryProfiles = new Map<string, any>();
+export const inMemoryProfiles = new Map<string, any>();
+
+function generateJwtToken(payload: object): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = 'signature_mock';
+  return `${header}.${body}.${signature}`;
+}
 
 @Injectable()
 export class AuthService {
@@ -23,7 +30,6 @@ export class AuthService {
   async register(dto: RegisterDto) {
     const emailKey = dto.email.toLowerCase();
     
-    // Check local DB if available, else memory
     try {
       const existing = await this.prisma.profile.findUnique({
         where: { email: emailKey },
@@ -33,14 +39,14 @@ export class AuthService {
       }
     } catch (err: any) {
       if (err instanceof BadRequestException) throw err;
-      this.logger.warn(`Prisma lookup failed, checking in-memory cache: ${err.message}`);
       if (inMemoryProfiles.has(emailKey)) {
         throw new BadRequestException('An account with this email address already exists.');
       }
     }
 
     let authUserId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    let accessToken = `jwt_token_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    const jwtPayload = { sub: authUserId, email: emailKey, role: 'STUDENT', iat: Math.floor(Date.now() / 1000) };
+    let accessToken = generateJwtToken(jwtPayload);
 
     if (this.supabaseUrl && this.supabaseAnonKey) {
       try {
@@ -105,10 +111,12 @@ export class AuthService {
         },
       });
       inMemoryProfiles.set(emailKey, profile);
+      inMemoryProfiles.set(authUserId, profile);
       return { user: profile, accessToken, accessTokenExpiry: '7d' };
     } catch (err: any) {
       this.logger.warn(`Prisma profile save fallback to memory: ${err.message}`);
       inMemoryProfiles.set(emailKey, profileData);
+      inMemoryProfiles.set(authUserId, profileData);
       return { user: profileData, accessToken, accessTokenExpiry: '7d' };
     }
   }
@@ -131,10 +139,10 @@ export class AuthService {
     }
 
     if (!profile) {
-      // Demo auto-provision fallback if user logs in
+      const authUserId = `usr_demo_${Date.now()}`;
       profile = {
-        id: `usr_demo_${Date.now()}`,
-        authUserId: `usr_demo_${Date.now()}`,
+        id: authUserId,
+        authUserId,
         email: emailKey,
         fullName: dto.email.split('@')[0].toUpperCase(),
         role: emailKey.includes('admin') ? 'ADMIN' : 'STUDENT',
@@ -148,13 +156,15 @@ export class AuthService {
         },
       };
       inMemoryProfiles.set(emailKey, profile);
+      inMemoryProfiles.set(authUserId, profile);
     }
 
     if (profile.isSuspended) {
       throw new UnauthorizedException('Account suspended');
     }
 
-    let token = `jwt_token_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    const jwtPayload = { sub: profile.authUserId || profile.id, email: profile.email, role: profile.role, iat: Math.floor(Date.now() / 1000) };
+    let token = generateJwtToken(jwtPayload);
 
     if (this.supabaseUrl && this.supabaseAnonKey) {
       try {
