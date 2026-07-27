@@ -1,79 +1,46 @@
-﻿import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Injectable()
-export class CacheService implements OnModuleInit, OnModuleDestroy {
+export class CacheService implements OnModuleInit {
   private readonly logger = new Logger(CacheService.name);
-  private client: Redis | null = null;
-  private readonly defaultTtl: number;
 
-  constructor(private configService: ConfigService) {
-    this.defaultTtl = this.configService.get<number>('redis.ttlSeconds') ?? 300;
-  }
+  constructor(@Inject('REDIS_CLIENT') private readonly redisClient: Redis) {}
 
-  async onModuleInit() {
-    const redisUrl = this.configService.get<string>('redis.url') ?? 'redis://localhost:6379';
-    try {
-      this.client = new Redis(redisUrl, {
-        maxRetriesPerRequest: 3,
-        lazyConnect: true,
-      });
-      await this.client.connect();
-      this.logger.log(`Connected to Redis at ${redisUrl}`);
-    } catch (err) {
-      this.logger.warn(`Redis connection failed (${err instanceof Error ? err.message : 'Unknown error'}). Falling back to in-memory/no-op cache.`);
-      this.client = null;
-    }
-  }
-
-  async onModuleDestroy() {
-    if (this.client) {
-      await this.client.quit();
-    }
+  onModuleInit() {
+    this.redisClient.on('error', (err) => {
+      this.logger.warn(`Redis connection issue: ${err.message}. Cache-aside fallback enabled.`);
+    });
   }
 
   async get<T>(key: string): Promise<T | null> {
-    if (!this.client) return null;
     try {
-      const data = await this.client.get(key);
-      if (!data) return null;
-      return JSON.parse(data) as T;
-    } catch (err) {
-      this.logger.error(`Cache GET error for key ${key}: ${err}`);
+      const data = await this.redisClient.get(key);
+      return data ? JSON.parse(data) : null;
+    } catch (err: any) {
+      this.logger.warn(`Cache GET error for key '${key}': ${err.message}`);
       return null;
     }
   }
 
-  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    if (!this.client) return;
+  async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
     try {
-      const ttl = ttlSeconds ?? this.defaultTtl;
-      const data = JSON.stringify(value);
-      await this.client.setex(key, ttl, data);
-    } catch (err) {
-      this.logger.error(`Cache SET error for key ${key}: ${err}`);
+      const serialized = JSON.stringify(value);
+      if (ttlSeconds) {
+        await this.redisClient.set(key, serialized, 'EX', ttlSeconds);
+      } else {
+        await this.redisClient.set(key, serialized);
+      }
+    } catch (err: any) {
+      this.logger.warn(`Cache SET error for key '${key}': ${err.message}`);
     }
   }
 
   async del(key: string): Promise<void> {
-    if (!this.client) return;
     try {
-      await this.client.del(key);
-    } catch (err) {
-      this.logger.error(`Cache DEL error for key ${key}: ${err}`);
-    }
-  }
-
-  async invalidatePattern(pattern: string): Promise<void> {
-    if (!this.client) return;
-    try {
-      const keys = await this.client.keys(pattern);
-      if (keys.length > 0) {
-        await this.client.del(...keys);
-      }
-    } catch (err) {
-      this.logger.error(`Cache invalidatePattern error for pattern ${pattern}: ${err}`);
+      await this.redisClient.del(key);
+    } catch (err: any) {
+      this.logger.warn(`Cache DEL error for key '${key}': ${err.message}`);
     }
   }
 }

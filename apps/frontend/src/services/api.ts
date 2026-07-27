@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -39,7 +39,7 @@ export const userApi = {
   getMe: () => api.get('/users/me'),
   getDashboard: () => api.get('/users/me/dashboard'),
   getHistory: () => api.get('/users/me/history'),
-  updateProfile: (data: any) => api.patch('/users/me', data),
+  updateProfile: (data: any) => api.patch('/users/me'),
 };
 
 export const questionsApi = {
