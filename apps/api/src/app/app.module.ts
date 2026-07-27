@@ -10,6 +10,8 @@ import { ObservabilityModule } from '../infrastructure/observability/observabili
 import { AuditModule } from '../infrastructure/audit/audit.module';
 import { AuthModule } from '../core/auth/auth.module';
 import { UsersModule } from '../core/users/users.module';
+import { QuestionsModule } from '../learning/questions/questions.module';
+import { StorageModule } from '../core/storage/storage.module';
 import { GlobalExceptionFilter } from '../infrastructure/common/filters/global-exception.filter';
 import { ResponseInterceptor } from '../infrastructure/common/interceptors/response.interceptor';
 import { HealthController } from '../health/health.controller';
@@ -27,6 +29,8 @@ import { AppService } from './app.service';
     AuditModule,
     AuthModule,
     UsersModule,
+    QuestionsModule,
+    StorageModule,
   ],
   controllers: [HealthController],
   providers: [
