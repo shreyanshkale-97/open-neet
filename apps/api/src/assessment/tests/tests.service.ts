@@ -39,18 +39,21 @@ export class TestsService {
       }
     }
 
-    // Fallback: If DB bank has no questions, create dynamic test session from NEET Question Bank Dataset
+    // Fallback: If DB bank has no questions, create dynamic test session from NEET Question Bank Dataset with anti-repetition
     if (selectedQuestionIds.length === 0) {
       const targetSub = (dto.subjectId || 'physics').toLowerCase();
       let matchedDataset = NEET_QUESTION_BANK_DATASET.filter((q) => q.subjectId.toLowerCase() === targetSub);
       if (matchedDataset.length === 0) matchedDataset = NEET_QUESTION_BANK_DATASET;
 
+      // Shuffle dataset so consecutive tests do not start with the same question
+      const shuffledDataset = [...matchedDataset].sort(() => 0.5 - Math.random());
+
       const neededCount = dto.totalQuestions || 10;
       const testId = `dynamic_test_${Date.now()}`;
 
       const testQuestions = Array.from({ length: neededCount }).map((_, idx) => {
-        const item = matchedDataset[idx % matchedDataset.length];
-        const qId = `q_dyn_${idx + 1}`;
+        const item = shuffledDataset[idx % shuffledDataset.length];
+        const qId = `${item.id}_t_${Date.now()}_${idx + 1}`;
         return {
           id: `tq_${idx + 1}`,
           questionId: qId,

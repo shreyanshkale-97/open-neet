@@ -190,6 +190,7 @@ export class AiService {
       try {
         await updateJob(AiJobStatus.GENERATING, 70, 'Using NEET Question Bank Dataset Engine');
         const fallbackItems = this.difficultyEngine.selectQuestionsForBlueprint({
+          userId,
           subjectId: dto.subjectId,
           chapterName: topic?.name,
           targetDifficulty: dto.difficulty,
