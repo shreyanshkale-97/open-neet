@@ -29,6 +29,7 @@ import { ConfidenceCalculatorStage } from './pipeline/stages/confidence-calculat
 import { OwnPaperPipelineOrchestrator } from './pipeline/own-paper-pipeline.orchestrator';
 
 import { DifficultyEngineService } from './services/difficulty-engine.service';
+import { HuggingFaceDatasetService } from './services/huggingface-dataset.service';
 
 @Module({
   imports: [forwardRef(() => RagModule)],
@@ -45,6 +46,7 @@ import { DifficultyEngineService } from './services/difficulty-engine.service';
     PdfProcessorService,
     QuestionValidatorService,
     DifficultyEngineService,
+    HuggingFaceDatasetService,
     
     // Factory Pipeline Providers
     PaperClassifierStage,
@@ -72,6 +74,7 @@ import { DifficultyEngineService } from './services/difficulty-engine.service';
     PdfProcessorService,
     QuestionValidatorService,
     DifficultyEngineService,
+    HuggingFaceDatasetService,
     OwnPaperPipelineOrchestrator,
   ],
 })

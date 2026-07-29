@@ -16,6 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../core/auth/guards/jwt-auth.guard';
 import { GetUser } from '../core/auth/decorators/get-user.decorator';
 import { OwnPaperService } from './own-paper.service';
+import { HuggingFaceDatasetService } from './services/huggingface-dataset.service';
 import {
   NEET_2027_SYLLABUS,
   getNeet2027SyllabusSummary,
@@ -27,7 +28,10 @@ import * as path from 'path';
 export class OwnPaperController {
   private readonly logger = new Logger(OwnPaperController.name);
 
-  constructor(private ownPaperService: OwnPaperService) {}
+  constructor(
+    private ownPaperService: OwnPaperService,
+    private hfDatasetService: HuggingFaceDatasetService,
+  ) {}
 
   @Post('own-paper')
   @UseGuards(JwtAuthGuard)
@@ -131,6 +135,29 @@ export class OwnPaperController {
     return {
       status: 'SUCCESS',
       summary: getNeet2027SyllabusSummary(),
+    };
+  }
+
+  // Open Dataset & Hugging Face Sync Endpoints
+  @Get('dataset/sources')
+  @Version('1')
+  async getDatasetSources() {
+    return {
+      status: 'SUCCESS',
+      availableDatasets: this.hfDatasetService.getAvailableDatasets(),
+    };
+  }
+
+  @Post('dataset/sync-huggingface')
+  @Version('1')
+  async syncHuggingFaceDataset(@Headers('x-dataset-id') datasetId?: string) {
+    const targetDataset = datasetId || 'sweatSmile/neet-biology-qa';
+    const result = await this.hfDatasetService.fetchFromHuggingFace(targetDataset, 100);
+    return {
+      status: 'SUCCESS',
+      datasetId: targetDataset,
+      importedQuestionsCount: result.length,
+      sampleQuestions: result.slice(0, 3),
     };
   }
 }
