@@ -6,10 +6,10 @@ import { AiProvider, AI_PROVIDER_TOKEN } from './providers/ai-provider.interface
 import { RagService } from './rag/rag.service';
 import { GenerateQuestionsDto } from './dto/ai.dto';
 import {
-  buildGeneratorUserPrompt,
-  buildGeneratorSystemPrompt,
-  GENERATOR_PROMPT_VERSION,
-} from './prompts/generator-v1.prompt';
+  buildGeneratorUserPromptV2,
+  buildGeneratorSystemPromptV2,
+  GENERATOR_PROMPT_VERSION_V2,
+} from './prompts/generator-v2.prompt';
 import { QUEUES } from '../infrastructure/queue/queues.constants';
 import { AiJobStatus, JobType, QuestionStatus } from '@prisma/client';
 import { z } from 'zod';
@@ -108,13 +108,13 @@ export class AiService {
         ragContext = ragRes.contextText;
       }
 
-      // Step 4: Build prompt (versioned) + call AI provider
-      await updateJob(AiJobStatus.GENERATING, 60, `Generating with ${GENERATOR_PROMPT_VERSION}`);
+      // Step 4: Build prompt (versioned V2 NEET 2027) + call AI provider
+      await updateJob(AiJobStatus.GENERATING, 60, `Generating with ${GENERATOR_PROMPT_VERSION_V2}`);
 
-      const systemPrompt = buildGeneratorSystemPrompt();
-      const userPrompt = buildGeneratorUserPrompt({
+      const systemPrompt = buildGeneratorSystemPromptV2();
+      const userPrompt = buildGeneratorUserPromptV2({
         subjectName: subject.name,
-        topicName: topic?.name,
+        chapterName: topic?.name,
         difficulty: dto.difficulty,
         count: dto.count,
         ragContext,

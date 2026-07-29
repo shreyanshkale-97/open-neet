@@ -16,6 +16,10 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../core/auth/guards/jwt-auth.guard';
 import { GetUser } from '../core/auth/decorators/get-user.decorator';
 import { OwnPaperService } from './own-paper.service';
+import {
+  NEET_2027_SYLLABUS,
+  getNeet2027SyllabusSummary,
+} from './datasets/neet-2027-syllabus.dataset';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -108,4 +112,26 @@ export class OwnPaperController {
       </svg>
     `);
   }
+
+  // NMC NEET UG 2026/2027 Official Syllabus & Weightage Data Endpoint
+  @Get('syllabus/neet-2027')
+  @Version('1')
+  async getNeet2027Syllabus() {
+    return {
+      status: 'SUCCESS',
+      syllabusVersion: 'NEET_UG_2026_2027_NMC_NCERT_v1',
+      summary: getNeet2027SyllabusSummary(),
+      subjects: NEET_2027_SYLLABUS,
+    };
+  }
+
+  @Get('syllabus/neet-2027/summary')
+  @Version('1')
+  async getNeet2027SyllabusSummaryEndpoint() {
+    return {
+      status: 'SUCCESS',
+      summary: getNeet2027SyllabusSummary(),
+    };
+  }
 }
+
