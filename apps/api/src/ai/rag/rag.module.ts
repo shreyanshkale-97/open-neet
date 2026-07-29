@@ -1,12 +1,13 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { RagService } from './rag.service';
 import { ChunkingService } from './chunking.service';
 import { RetrievalService } from './retrieval.service';
 import { RagRepository } from './rag.repository';
-import { GeminiProvider } from '../providers/gemini.provider';
+import { AiModule } from '../ai.module';
 
 @Module({
-  providers: [RagService, ChunkingService, RetrievalService, RagRepository, GeminiProvider],
+  imports: [forwardRef(() => AiModule)],
+  providers: [RagService, ChunkingService, RetrievalService, RagRepository],
   exports: [RagService, ChunkingService, RetrievalService],
 })
 export class RagModule {}

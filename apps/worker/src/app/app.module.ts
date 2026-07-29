@@ -4,6 +4,7 @@ import { PrismaModule } from '../../../api/src/infrastructure/database/prisma.mo
 import { CacheModule } from '../../../api/src/infrastructure/cache/cache.module';
 import { AppEventsModule } from '../../../api/src/infrastructure/events/events.module';
 import { AppQueueModule } from '../../../api/src/infrastructure/queue/queue.module';
+import { ObservabilityModule } from '../../../api/src/infrastructure/observability/observability.module';
 import { AiModule } from '../../../api/src/ai/ai.module';
 import { AiGenerationProcessor } from '../jobs/ai-generation.processor';
 import { DocumentProcessingProcessor } from '../jobs/document-processing.processor';
@@ -22,6 +23,7 @@ import { AppService } from './app.service';
     CacheModule,
     AppEventsModule,
     AppQueueModule,
+    ObservabilityModule,
     AiModule,
   ],
   providers: [

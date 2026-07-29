@@ -52,6 +52,17 @@ export const aiApi = {
   getJobStatus: (id: string) => api.get(`/ai/jobs/${id}`),
 };
 
+export const ownPaperApi = {
+  processPaper: (formData: FormData, jobId?: string) =>
+    api.post('/ai/own-paper', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...(jobId ? { 'x-job-id': jobId } : {}),
+      },
+    }),
+  getProgress: (jobId: string) => api.get(`/ai/own-paper/progress/${jobId}`),
+};
+
 export const testsApi = {
   createTest: (data: any) => api.post('/tests/create', data),
   getTest: (id: string) => api.get(`/tests/${id}`),

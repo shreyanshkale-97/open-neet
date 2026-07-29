@@ -1,119 +1,165 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  AiProvider,
+  AiOptions,
+  AiResponse,
+  AiHealthStatus,
+  ValidationResult,
+} from './ai-provider.interface';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { AiProvider, AiOptions, AiResponse, ValidationResult } from './ai-provider.interface';
 
 @Injectable()
 export class GeminiProvider implements AiProvider {
   private readonly logger = new Logger(GeminiProvider.name);
-  private genAI: GoogleGenerativeAI | null = null;
-  private defaultModel: string;
-  private proModel: string;
-  private embeddingModel: string;
+  private readonly client: GoogleGenerativeAI;
+  private readonly textModel: string;
+  private readonly proModel: string;
+  private readonly visionModel: string;
+  private readonly embeddingModel: string;
 
-  constructor(private config: ConfigService) {
-    const apiKey = this.config.get<string>('ai.apiKey') ?? '';
-    this.defaultModel = this.config.get<string>('ai.model') ?? 'gemini-1.5-flash';
-    this.proModel = this.config.get<string>('ai.proModel') ?? 'gemini-1.5-pro';
-    this.embeddingModel = this.config.get<string>('ai.embeddingModel') ?? 'text-embedding-004';
-
-    if (apiKey) {
-      this.genAI = new GoogleGenerativeAI(apiKey);
-    } else {
-      this.logger.warn('Gemini API key is missing. AI calls will operate in fallback mode.');
-    }
+  constructor(private readonly config: ConfigService) {
+    const apiKey = config.get<string>('ai.apiKey', '');
+    this.client = new GoogleGenerativeAI(apiKey);
+    this.textModel = config.get<string>('ai.model', 'gemini-2.0-flash');
+    this.proModel = config.get<string>('ai.proModel', 'gemini-2.5-flash');
+    this.visionModel = config.get<string>('ai.visionModel', 'gemini-2.0-flash');
+    this.embeddingModel = config.get<string>('ai.embeddingModel', 'text-embedding-004');
   }
+
+  // ── Text generation ──────────────────────────────────────────────────────────
 
   async generateContent(prompt: string, options?: AiOptions): Promise<AiResponse> {
     const start = Date.now();
-    const modelName = options?.useAdvancedModel ? this.proModel : this.defaultModel;
+    const modelName = options?.useAdvancedModel ? this.proModel : this.textModel;
+    const model = this.client.getGenerativeModel({ model: modelName });
 
-    if (!this.genAI) {
-      return {
-        text: 'Fallback mock AI response: Gemini API key not configured.',
-        promptTokens: 10,
-        outputTokens: 10,
-        totalTokens: 20,
-        model: modelName,
-        responseTimeMs: Date.now() - start,
-      };
-    }
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    const responseTimeMs = Date.now() - start;
 
-    try {
-      const model = this.genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      const duration = Date.now() - start;
-
-      // Estimate tokens
-      const promptTokens = Math.ceil(prompt.length / 4);
-      const outputTokens = Math.ceil(text.length / 4);
-
-      return {
-        text,
-        promptTokens,
-        outputTokens,
-        totalTokens: promptTokens + outputTokens,
-        model: modelName,
-        responseTimeMs: duration,
-      };
-    } catch (err) {
-      this.logger.error(`Gemini generation error: ${err}`);
-      throw err;
-    }
+    const usage = result.response.usageMetadata;
+    return {
+      text: responseText,
+      promptTokens: usage?.promptTokenCount ?? 0,
+      outputTokens: usage?.candidatesTokenCount ?? 0,
+      totalTokens: usage?.totalTokenCount ?? 0,
+      model: modelName,
+      responseTimeMs,
+    };
   }
+
+  // ── Vision — send page images as inline data ─────────────────────────────────
+
+  async generateWithImages(
+    images: Buffer[],
+    mimeType: string,
+    prompt: string,
+  ): Promise<string> {
+    const start = Date.now();
+    const model = this.client.getGenerativeModel({ model: this.visionModel });
+
+    const parts: any[] = [
+      { text: prompt },
+      ...images.map(img => ({
+        inlineData: {
+          data: img.toString('base64'),
+          mimeType: mimeType || 'image/png',
+        },
+      })),
+    ];
+
+    const result = await model.generateContent(parts);
+    this.logger.debug(`Vision: ${images.length} images, time=${Date.now() - start}ms`);
+    return result.response.text();
+  }
+
+  // ── PDF direct (Gemini-native, no image conversion needed) ───────────────────
+
+  async generateWithPdf(pdfBuffer: Buffer, prompt: string): Promise<string> {
+    const model = this.client.getGenerativeModel({ model: this.visionModel });
+
+    const parts: any[] = [
+      { text: prompt },
+      {
+        inlineData: {
+          data: pdfBuffer.toString('base64'),
+          mimeType: 'application/pdf',
+        },
+      },
+    ];
+
+    const result = await model.generateContent(parts);
+    return result.response.text();
+  }
+
+  // ── Embeddings ────────────────────────────────────────────────────────────────
 
   async generateEmbedding(text: string): Promise<number[]> {
-    if (!this.genAI) {
-      // Mock embedding vector of 1536 zeros
-      return new Array(1536).fill(0);
-    }
-    try {
-      const model = this.genAI.getGenerativeModel({ model: this.embeddingModel });
-      const result = await model.embedContent(text);
-      return result.embedding.values;
-    } catch (err) {
-      this.logger.error(`Gemini embedding error: ${err}`);
-      return new Array(1536).fill(0);
-    }
+    const model = this.client.getGenerativeModel({ model: this.embeddingModel });
+    const result = await model.embedContent(text);
+    return result.embedding.values;
   }
+
+  // ── Validation ────────────────────────────────────────────────────────────────
 
   async validateQuestion(
     questionText: string,
     options: string[],
-    correctOption: string
+    correctOption: string,
   ): Promise<ValidationResult> {
-    const prompt = `
-Validate the following NEET question:
+    const prompt = `Validate this NEET exam question:
 Question: ${questionText}
-Options: ${options.join(', ')}
-Correct Answer: ${correctOption}
+Options: ${options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n')}
+Correct: ${correctOption}
 
-Check:
-1. Is the question scientific and accurate for NEET level?
-2. Is there exactly one correct answer?
-3. Are options distinct and non-overlapping?
+Is this valid? Reply JSON: {"isValid": true/false, "issues": [], "suggestedFix": ""}`;
 
-Respond ONLY in JSON format:
-{
-  "isValid": true/false,
-  "issues": ["list of issues if any"],
-  "suggestedFix": "suggestion if needed"
-}
-`;
-
+    const res = await this.generateContent(prompt, { temperature: 0.1 });
     try {
-      const res = await this.generateContent(prompt, { useAdvancedModel: false });
-      const cleanJson = res.text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
-      return {
-        isValid: Boolean(parsed.isValid),
-        issues: Array.isArray(parsed.issues) ? parsed.issues : [],
-        suggestedFix: parsed.suggestedFix,
-      };
+      const cleaned = res.text.replace(/```json|```/g, '').trim();
+      return JSON.parse(cleaned) as ValidationResult;
     } catch {
       return { isValid: true, issues: [] };
+    }
+  }
+
+  // ── Health check ──────────────────────────────────────────────────────────────
+
+  async healthCheck(): Promise<AiHealthStatus> {
+    const apiKey = this.config.get<string>('ai.apiKey', '');
+    if (!apiKey) {
+      return {
+        ok: false,
+        provider: 'gemini',
+        textModel: this.textModel,
+        visionModel: this.visionModel,
+        embedModel: this.embeddingModel,
+        error: 'GEMINI_API_KEY is not configured',
+      };
+    }
+
+    try {
+      const start = Date.now();
+      const model = this.client.getGenerativeModel({ model: this.textModel });
+      await model.generateContent('ping');
+      return {
+        ok: true,
+        provider: 'gemini',
+        textModel: this.textModel,
+        visionModel: this.visionModel,
+        embedModel: this.embeddingModel,
+        latencyMs: Date.now() - start,
+      };
+    } catch (err: any) {
+      return {
+        ok: false,
+        provider: 'gemini',
+        textModel: this.textModel,
+        visionModel: this.visionModel,
+        embedModel: this.embeddingModel,
+        error: err.message,
+      };
     }
   }
 }

@@ -13,7 +13,7 @@ export class UsersController {
   @Get('me')
   @Version('1')
   async getMe(@GetUser() user: Profile) {
-    return this.usersService.getProfile(user.id);
+    return this.usersService.getProfile(user.id, user);
   }
 
   @Patch('me')

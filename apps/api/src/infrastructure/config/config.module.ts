@@ -1,10 +1,11 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import {
   appConfig,
   supabaseConfig,
   redisConfig,
   aiConfig,
+  ollamaConfig,
   jwtConfig,
   storageConfig,
   throttleConfig,
@@ -20,6 +21,7 @@ import {
         supabaseConfig,
         redisConfig,
         aiConfig,
+        ollamaConfig,
         jwtConfig,
         storageConfig,
         throttleConfig,

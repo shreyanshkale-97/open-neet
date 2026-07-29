@@ -64,3 +64,10 @@ logs/
 # ─── OS ─────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# ─── Local Test Data & Temporary Folders ───────────────────────
+*.pdf
+scratch/
+uploads/
+storage/diagrams/
+

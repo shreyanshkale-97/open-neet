@@ -1,96 +1,139 @@
-# NeetAiPlatform
+# 🎯 AIM NEET AI Platform
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+[![Nx Monorepo](https://img.shields.io/badge/Nx-Monorepo-blue?style=flat&logo=nx)](https://nx.dev)
+[![NestJS](https://img.shields.io/badge/NestJS-10.0-red?style=flat&logo=nestjs)](https://nestjs.com)
+[![React](https://img.shields.io/badge/React-18.0-61DAFB?style=flat&logo=react)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?style=flat&logo=vite)](https://vitejs.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org)
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+An intelligent, AI-powered diagnostic assessment, test generation, and question paper parsing platform specifically engineered for **NEET (National Eligibility cum Entrance Test)** preparation across Physics, Chemistry, and Biology.
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+---
 
-## Run tasks
+## 🌟 Key Features
 
-To run tasks with Nx use:
+### 📄 1. Intelligent PDF Paper Extraction Engine (Factory Pipeline v2.0)
+Extracts questions, options, correct answers, subject tags, and diagram crops from official NEET papers, DPPs, and scanned sheets with high precision:
+- **Multi-Layout Support**: Handles 56-page NTA official booklets, 2-column DPP sheets (Physics Wallah, Allen, Aakash), and scanned image PDFs.
+- **2D Column-Aware Sorting**: Precise $Y$-descending (top-to-bottom) and $X$-ascending (left-to-right) line reader prevents text item scrambling in two-column exam layouts.
+- **Instruction Page Suppressor**: Automatically detects and skips Page 1 cover instructions so extraction begins cleanly on actual questions.
+- **High-DPI Diagram Renderer**: Renders question diagrams at 2.5x resolution with $+80\text{px}$ slice height padding and surgical line erasers for crisp circuit/graph images without truncation.
+- **NEET Scientific Symbol Normalizer**: Full normalization for Greek symbols ($\pi, \alpha, \beta, \gamma, \mu, \Omega, \theta$), fractions ($\frac{1}{2}, \frac{1}{4}$), units ($\text{\AA}, \text{°C}$), and chemical reaction arrows ($\rightarrow, \rightleftharpoons$).
+- **Multi-Strategy Option Parser**: Eliminates generic `"Option A"` placeholders using 4 sequential fallback strategies for `(1)`, `(a)`, `A.`, `A)`, and `[1]`.
+- **Vision OCR Fallback**: Automatically invokes Tesseract.js worker engine when processing scanned or photo-based PDF documents.
 
-```sh
-npx nx <target> <project-name>
+### 🧪 2. Test Generation & Live Exam Engine
+- **Custom Test Creation**: Generate timed mock exams filtered by Subject (Physics, Chemistry, Botany, Zoology), Chapter, Question Count, and Difficulty.
+- **Interactive Exam UI**: Complete test interface with live timer, question palette navigation, status color indicators (Answered, Unanswered, Marked for Review), and instant submission.
+- **Performance Analytics**: Instant score calculation, detailed subject-wise breakdown, and target score comparison.
+
+---
+
+## 🏗️ Architecture & Project Structure
+
+The project is structured as an **Nx Monorepo**:
+
+```
+neet-ai-platform/
+├── apps/
+│   ├── api/                 # NestJS Backend API Service
+│   │   └── src/
+│   │       ├── ai/          # AI Pipeline v2.0 (Stages, Providers, RAG, Service)
+│   │       │   ├── factory/ # Factory Pipeline Stage Executor
+│   │       │   ├── pipeline/# Extraction Stages (Splitter, Builder, Vision OCR)
+│   │       │   ├── providers/# LLM Adapters (Gemini, Ollama)
+│   │       │   ├── rag/     # Vector Retrieval & Question Store
+│   │       │   └── services/# PDF Processor & Canvas Renderer
+│   │       ├── assessment/  # Test & Question Management
+│   │       ├── core/        # User Authentication & Profiles
+│   │       └── infrastructure/# Config, Database, Redis, Logger
+│   │
+│   ├── frontend/            # React 18 + Vite Web Application
+│   │   └── src/
+│   │       ├── pages/       # Dashboard, Own Paper Mode, AI Generator, Test UI
+│   │       ├── services/    # Axios API Client & State Hooks
+│   │       └── styles.css   # Dark / Light Theme Tokens & Palette Styles
+│   │
+│   └── worker/              # NestJS Async Background Worker
+│
+└── package.json
 ```
 
-For example:
+---
 
-```sh
-npx nx build myproject
+## ⚡ Quick Start
+
+### Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **Package Manager**: `pnpm` or `npm`
+- **Database**: PostgreSQL (v14+)
+- **Cache / Queue**: Redis (v7+)
+
+### 1. Installation
+Clone the repository and install dependencies:
+```bash
+git clone https://github.com/shreyanshkale-97/open-neet.git
+cd neet-ai-platform
+pnpm install
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
-
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Add new projects
-
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-To install a new plugin you can use the `nx add` command. Here's an example of adding the React plugin:
-```sh
-npx nx add @nx/react
+### 2. Environment Configuration
+Create a `.env` file in the root directory (or copy from `.env.example`):
+```env
+PORT=3000
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/neet_db
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=your_jwt_secret_key
+GEMINI_API_KEY=your_gemini_api_key
+OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-Use the plugin's generator to create new projects. For example, to create a new React app or library:
+### 3. Running Services Locally
 
-```sh
-# Generate an app
-npx nx g @nx/react:app demo
-
-# Generate a library
-npx nx g @nx/react:lib some-lib
+#### Start Backend API:
+```bash
+pnpm exec nx serve api
 ```
 
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
-
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
+#### Start Frontend Web App:
+```bash
+pnpm exec nx serve frontend
 ```
 
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
+#### Start Background Worker:
+```bash
+pnpm exec nx serve worker
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+The application will be accessible at:
+- **Frontend App**: `http://localhost:4200`
+- **Backend API**: `http://localhost:3000/api/v1`
+- **API Health Check**: `http://localhost:3000/api/v1/health`
 
-## Install Nx Console
+---
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+## 🛠️ Testing & Verification
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Run automated tests for the workspace:
+```bash
+# Run unit tests across all applications
+pnpm exec nx run-many -t test
 
-## Useful links
+# Build all applications for production
+pnpm exec nx run-many -t build
+```
 
-Learn more:
+---
 
-- [Learn more about this workspace setup](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## 🐳 Docker Deployment
 
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Build and run using Docker Compose:
+```bash
+docker-compose up --build -d
+```
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

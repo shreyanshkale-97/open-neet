@@ -197,16 +197,57 @@ export const TestInterfacePage: React.FC = () => {
         <div style={{ flex: 1, padding: '2rem', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {currentQ && (
             <div style={{ flex: 1 }}>
+              {/* Needs Review Warning */}
+              {currentTQ?.needsReview && (
+                <div style={{
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  borderRadius: '8px',
+                  padding: '0.65rem 1rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  fontSize: '0.8rem',
+                  color: '#F59E0B',
+                }}>
+                  ⚠️ <span><strong>Extraction review needed</strong>{currentTQ.reviewReason ? `: ${currentTQ.reviewReason}` : ''}. Verify against original paper.</span>
+                </div>
+              )}
+
               <div style={{ fontSize: '1.15rem', fontWeight: 600, lineHeight: 1.6, marginBottom: '2rem' }}>
                 <span style={{ color: '#6366F1', fontWeight: 800, marginRight: '0.5rem' }}>Q{currentIdx + 1}.</span>
-                {currentQ.questionText}
+                {currentQ.questionText || currentQ.text}
+                {/* Visual Diagram Asset Rendering */}
+                {currentQ.hasImage && (() => {
+                  const rawUrl = currentQ.imageUrl || currentQ.diagramUrl || `/api/v1/ai/storage/diagrams/diagram_${test.id}_q${currentIdx + 1}.png`;
+                  const fullImgUrl = rawUrl.startsWith('/api') ? `http://localhost:3000${rawUrl}` : rawUrl;
+                  return (
+                    <div style={{ marginTop: '1.25rem', marginBottom: '1.25rem', textAlign: 'center', background: '#FFFFFF', padding: '1rem', borderRadius: '12px', border: '2px solid #6366F1', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                      <img
+                        src={fullImgUrl}
+                        alt={`Diagram for Question ${currentIdx + 1}`}
+                        onError={(e: any) => {
+                          e.target.onerror = null;
+                          e.target.style.display = 'none';
+                        }}
+                        style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '6px' }}
+                      />
+                      {currentQ.imageDescription && (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#475569', fontStyle: 'italic' }}>
+                          {currentQ.imageDescription}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Options */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2.5rem' }}>
-                {['A', 'B', 'C', 'D'].map((optLetter) => {
-                  const optText = currentQ[`option${optLetter}`];
-                  const isSelected = currentAns.option === optLetter;
+                {['A', 'B', 'C', 'D'].map((optLetter, optIdx) => {
+                  const optText = currentQ[`option${optLetter}`] || currentQ.options?.[optIdx]?.text || (typeof currentQ.options?.[optIdx] === 'string' ? currentQ.options[optIdx] : '');
+                  const isSelected = currentAns.option === optLetter || currentAns.option === String(optIdx);
                   return (
                     <div
                       key={optLetter}

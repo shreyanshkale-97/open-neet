@@ -11,9 +11,15 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     userApi.getDashboard()
-      .then((data) => setDashboard(data))
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        setDashboard(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Dashboard load error:', err);
+        setDashboard({});  // show empty state, not infinite loader
+        setLoading(false);
+      });
   }, []);
 
   const handleQuickTest = async (testType: string) => {
@@ -40,8 +46,9 @@ export const DashboardPage: React.FC = () => {
     );
   }
 
-  const stats = dashboard?.stats || {};
-  const history = dashboard?.recentHistory || [];
+  // Backend returns flat DashboardStats: { highestScore, averageScore, studyStreakDays, totalStudyHours, totalTestsTaken, weakTopics, recentTests }
+  const stats = dashboard || {};
+  const history = dashboard?.recentTests || [];
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
@@ -86,7 +93,7 @@ export const DashboardPage: React.FC = () => {
             <Flame size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{stats.currentStreak || 0} Days</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{stats.studyStreakDays || 0} Days</div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Study Streak</div>
           </div>
         </div>
@@ -106,7 +113,7 @@ export const DashboardPage: React.FC = () => {
             <Target size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{stats.averageAccuracy || 0}%</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{stats.averageScore || 0}%</div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Avg Accuracy</div>
           </div>
         </div>
