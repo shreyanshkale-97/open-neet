@@ -27,7 +27,7 @@ export interface BankQuestionItem {
 
 export const NEET_QUESTION_BANK_DATASET: BankQuestionItem[] = [
   // ─────────────────────────────────────────────────────────────
-  // PHYSICS QUESTIONS (Difficulty 1-10)
+  // PHYSICS QUESTIONS
   // ─────────────────────────────────────────────────────────────
   {
     id: 'bank_phy_001',
@@ -131,9 +131,29 @@ export const NEET_QUESTION_BANK_DATASET: BankQuestionItem[] = [
     explanation: 'H_max = u² sin²(θ) / (2g) = (20)² sin²(45°) / (2 × 10) = 400 × (1/2) / 20 = 10 m.',
     ncertReference: 'NCERT Class 11 Physics, Chapter 4 (Motion in a Plane)',
   },
+  {
+    id: 'bank_phy_006',
+    subjectId: 'physics',
+    unitId: 'phy_u15',
+    unitName: 'Modern Physics & Semiconductors',
+    chapterName: 'Semiconductor Electronics & Logic Gates',
+    questionText: 'Identify the truth table corresponding to a NAND logic gate:',
+    difficulty: 4,
+    difficultyCategory: 'MEDIUM',
+    questionType: 'SINGLE_CORRECT',
+    options: [
+      { optionLabel: 'A', optionText: 'Outputs 0 only when both inputs A = 1 and B = 1' },
+      { optionLabel: 'B', optionText: 'Outputs 1 only when both inputs A = 1 and B = 1' },
+      { optionLabel: 'C', optionText: 'Outputs 0 when either input is 1' },
+      { optionLabel: 'D', optionText: 'Outputs 1 when inputs are unequal' },
+    ],
+    correctOption: 'A',
+    explanation: 'NAND is the inverted AND gate Y = NOT(A AND B). It outputs 1 for (0,0), (0,1), (1,0) and 0 only when both inputs are 1.',
+    ncertReference: 'NCERT Class 12 Physics, Chapter 14 (Semiconductors)',
+  },
 
   // ─────────────────────────────────────────────────────────────
-  // CHEMISTRY QUESTIONS (Difficulty 1-10)
+  // CHEMISTRY QUESTIONS
   // ─────────────────────────────────────────────────────────────
   {
     id: 'bank_chem_001',
@@ -215,9 +235,29 @@ export const NEET_QUESTION_BANK_DATASET: BankQuestionItem[] = [
     explanation: 'At constant volume, V is fixed, so n_i / V for each reactant/product remains unchanged when inert gas is added. Thus, total pressure increases but partial pressures of reactants/products remain constant.',
     ncertReference: 'NCERT Class 11 Chemistry, Chapter 7 (Equilibrium)',
   },
+  {
+    id: 'bank_chem_005',
+    subjectId: 'chemistry',
+    unitId: 'chem_u4',
+    unitName: 'Solutions & Electrochemistry',
+    chapterName: 'Electrochemistry & Chemical Kinetics',
+    questionText: 'For a first-order reaction A → Products, the time required for 75% completion is 60 minutes. The half-life period (t1/2) of the reaction is:',
+    difficulty: 4,
+    difficultyCategory: 'MEDIUM',
+    questionType: 'SINGLE_CORRECT',
+    options: [
+      { optionLabel: 'A', optionText: '15 minutes' },
+      { optionLabel: 'B', optionText: '30 minutes' },
+      { optionLabel: 'C', optionText: '45 minutes' },
+      { optionLabel: 'D', optionText: '20 minutes' },
+    ],
+    correctOption: 'B',
+    explanation: 'For a first-order reaction, t_75% = 2 × t_1/2. Therefore, t_1/2 = 60 / 2 = 30 minutes.',
+    ncertReference: 'NCERT Class 12 Chemistry, Chapter 4 (Chemical Kinetics)',
+  },
 
   // ─────────────────────────────────────────────────────────────
-  // BOTANY QUESTIONS (Difficulty 1-10)
+  // BOTANY QUESTIONS
   // ─────────────────────────────────────────────────────────────
   {
     id: 'bank_bot_001',
@@ -301,7 +341,7 @@ export const NEET_QUESTION_BANK_DATASET: BankQuestionItem[] = [
   },
 
   // ─────────────────────────────────────────────────────────────
-  // ZOOLOGY QUESTIONS (Difficulty 1-10)
+  // ZOOLOGY QUESTIONS
   // ─────────────────────────────────────────────────────────────
   {
     id: 'bank_zoo_001',
@@ -384,5 +424,25 @@ export const NEET_QUESTION_BANK_DATASET: BankQuestionItem[] = [
     correctOption: 'B',
     explanation: 'Trophozoite (active stage of Entamoeba histolytica) secretes histolysin, invading mucosa/submucosa of the large intestine and ingesting RBCs.',
     ncertReference: 'NCERT Class 12 Biology, Chapter 8 (Human Health and Disease)',
+  },
+  {
+    id: 'bank_zoo_005',
+    subjectId: 'zoology',
+    unitId: 'zoo_u2',
+    unitName: 'Human Physiology',
+    chapterName: 'Excretory Products & Their Elimination',
+    questionText: 'The Juxtaglomerular Apparatus (JGA) releases which enzyme in response to a fall in glomerular filtration rate (GFR)?',
+    difficulty: 3,
+    difficultyCategory: 'EASY',
+    questionType: 'SINGLE_CORRECT',
+    options: [
+      { optionLabel: 'A', optionText: 'Renin' },
+      { optionLabel: 'B', optionText: 'Rennet' },
+      { optionLabel: 'C', optionText: 'Angiotensinogen' },
+      { optionLabel: 'D', optionText: 'Erythropoietin' },
+    ],
+    correctOption: 'A',
+    explanation: 'A fall in GFR activates JG cells to release Renin, which converts angiotensinogen in blood to angiotensin I and then angiotensin II (RAAS pathway).',
+    ncertReference: 'NCERT Class 11 Biology, Chapter 19 (Excretory Products)',
   },
 ];
