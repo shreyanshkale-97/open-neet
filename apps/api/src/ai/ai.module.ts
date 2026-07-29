@@ -28,6 +28,8 @@ import { NumberValidator } from './pipeline/stages/modular-validators/number.val
 import { ConfidenceCalculatorStage } from './pipeline/stages/confidence-calculator.stage';
 import { OwnPaperPipelineOrchestrator } from './pipeline/own-paper-pipeline.orchestrator';
 
+import { DifficultyEngineService } from './services/difficulty-engine.service';
+
 @Module({
   imports: [forwardRef(() => RagModule)],
   controllers: [AiController, OwnPaperController, AiHealthController],
@@ -42,6 +44,7 @@ import { OwnPaperPipelineOrchestrator } from './pipeline/own-paper-pipeline.orch
     },
     PdfProcessorService,
     QuestionValidatorService,
+    DifficultyEngineService,
     
     // Factory Pipeline Providers
     PaperClassifierStage,
@@ -68,6 +71,7 @@ import { OwnPaperPipelineOrchestrator } from './pipeline/own-paper-pipeline.orch
     OwnPaperService,
     PdfProcessorService,
     QuestionValidatorService,
+    DifficultyEngineService,
     OwnPaperPipelineOrchestrator,
   ],
 })

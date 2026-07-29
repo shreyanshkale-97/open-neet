@@ -219,7 +219,21 @@ export const TestInterfacePage: React.FC = () => {
                 <span style={{ color: '#6366F1', fontWeight: 800, marginRight: '0.5rem' }}>Q{currentIdx + 1}.</span>
                 {currentQ.questionText || currentQ.text}
                 {/* Visual Diagram Asset Rendering */}
-                {currentQ.hasImage && (() => {
+                {currentQ.svgDiagram ? (
+                  <div
+                    style={{
+                      marginTop: '1.25rem',
+                      marginBottom: '1.25rem',
+                      textAlign: 'center',
+                      background: '#0B0F17',
+                      padding: '1rem',
+                      borderRadius: '12px',
+                      border: '2px solid #6366F1',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    }}
+                    dangerouslySetInnerHTML={{ __html: currentQ.svgDiagram }}
+                  />
+                ) : currentQ.hasImage && (() => {
                   const rawUrl = currentQ.imageUrl || currentQ.diagramUrl || `/api/v1/ai/storage/diagrams/diagram_${test.id}_q${currentIdx + 1}.png`;
                   const fullImgUrl = rawUrl.startsWith('/api') ? `http://localhost:3000${rawUrl}` : rawUrl;
                   return (

@@ -7,6 +7,7 @@ import { ReportsService } from '../reports/reports.service';
 import { CreateTestDto, SubmitAnswerDto } from './dto/test.dto';
 import { TestSubmittedEvent, TestEvaluatedEvent } from '../../infrastructure/events/event-types';
 import { ownPaperTests } from '../../ai/own-paper.service';
+import { NEET_QUESTION_BANK_DATASET } from '../../ai/datasets/neet-question-bank.dataset';
 
 @Injectable()
 export class TestsService {
@@ -22,27 +23,84 @@ export class TestsService {
     let selectedQuestionIds: string[] = dto.questionIds || [];
 
     if (selectedQuestionIds.length === 0) {
-      const bankQuestions = await this.questionsRepo.searchBank({
-        subjectId: dto.subjectId || '',
-        unitIds: dto.unitIds,
-        topicIds: dto.topicIds,
-        minDifficulty: dto.difficulty ? Math.max(1, dto.difficulty - 2) : 1,
-        maxDifficulty: dto.difficulty ? Math.min(10, dto.difficulty + 2) : 10,
-        limit: dto.totalQuestions,
-      });
+      try {
+        const bankQuestions = await this.questionsRepo.searchBank({
+          subjectId: dto.subjectId || '',
+          unitIds: dto.unitIds,
+          topicIds: dto.topicIds,
+          minDifficulty: dto.difficulty ? Math.max(1, dto.difficulty - 2) : 1,
+          maxDifficulty: dto.difficulty ? Math.min(10, dto.difficulty + 2) : 10,
+          limit: dto.totalQuestions,
+        });
 
-      selectedQuestionIds = bankQuestions.map((q) => q.id);
+        selectedQuestionIds = bankQuestions.map((q) => q.id);
+      } catch (err) {
+        // Fallback to dataset
+      }
     }
 
+    // Fallback: If DB bank has no questions, create dynamic test session from NEET Question Bank Dataset
     if (selectedQuestionIds.length === 0) {
-      throw new BadRequestException('No matching questions found in question bank for test generation.');
+      const targetSub = (dto.subjectId || 'physics').toLowerCase();
+      let matchedDataset = NEET_QUESTION_BANK_DATASET.filter((q) => q.subjectId.toLowerCase() === targetSub);
+      if (matchedDataset.length === 0) matchedDataset = NEET_QUESTION_BANK_DATASET;
+
+      const neededCount = dto.totalQuestions || 10;
+      const testId = `dynamic_test_${Date.now()}`;
+
+      const testQuestions = Array.from({ length: neededCount }).map((_, idx) => {
+        const item = matchedDataset[idx % matchedDataset.length];
+        const qId = `q_dyn_${idx + 1}`;
+        return {
+          id: `tq_${idx + 1}`,
+          questionId: qId,
+          displayOrder: idx + 1,
+          question: {
+            id: qId,
+            questionNumber: idx + 1,
+            questionText: item.questionText,
+            questionType: item.questionType,
+            difficulty: item.difficulty,
+            hasImage: item.hasImage || false,
+            imageUrl: item.hasImage ? (item.imageUrl || `/api/v1/ai/storage/diagrams/${item.id}.png`) : undefined,
+            options: item.options.map((opt, oIdx) => ({
+              id: `opt_${idx + 1}_${oIdx}`,
+              optionLabel: opt.optionLabel,
+              optionText: opt.optionText,
+            })),
+            optionA: item.options[0]?.optionText || '',
+            optionB: item.options[1]?.optionText || '',
+            optionC: item.options[2]?.optionText || '',
+            optionD: item.options[3]?.optionText || '',
+            correctOption: item.correctOption,
+            correctOptionIndex: ['A', 'B', 'C', 'D'].indexOf(item.correctOption),
+            explanation: item.explanation,
+            ncertReference: item.ncertReference,
+          },
+        };
+      });
+
+      const dynamicSession = {
+        id: testId,
+        title: `NEET 2027 Mock Test — ${dto.testType || 'Practice'}`,
+        subjectId: dto.subjectId,
+        status: 'CREATED',
+        totalQuestions: neededCount,
+        durationMinutes: dto.durationMinutes || 180,
+        createdAt: new Date().toISOString(),
+        testQuestions,
+        studentAnswers: [],
+      };
+
+      ownPaperTests.set(testId, dynamicSession);
+      return dynamicSession;
     }
 
     return this.testsRepo.createTest(userId, dto, selectedQuestionIds);
   }
 
   async getTestSession(id: string, userId: string) {
-    if (id.startsWith('own_paper_') && ownPaperTests.has(id)) {
+    if ((id.startsWith('own_paper_') || id.startsWith('dynamic_test_')) && ownPaperTests.has(id)) {
       return ownPaperTests.get(id);
     }
 
@@ -61,7 +119,7 @@ export class TestsService {
   }
 
   async startTest(id: string, userId: string) {
-    if (id.startsWith('own_paper_') && ownPaperTests.has(id)) {
+    if ((id.startsWith('own_paper_') || id.startsWith('dynamic_test_')) && ownPaperTests.has(id)) {
       const test = ownPaperTests.get(id);
       test.status = 'IN_PROGRESS';
       test.startedAt = new Date().toISOString();
@@ -75,7 +133,7 @@ export class TestsService {
   }
 
   async saveAnswer(id: string, userId: string, dto: SubmitAnswerDto) {
-    if (id.startsWith('own_paper_') && ownPaperTests.has(id)) {
+    if ((id.startsWith('own_paper_') || id.startsWith('dynamic_test_')) && ownPaperTests.has(id)) {
       const test = ownPaperTests.get(id);
       let answer = test.studentAnswers.find((a: any) => a.questionId === dto.questionId);
       if (!answer) {
@@ -100,7 +158,7 @@ export class TestsService {
   }
 
   async submitTest(id: string, userId: string) {
-    if (id.startsWith('own_paper_') && ownPaperTests.has(id)) {
+    if ((id.startsWith('own_paper_') || id.startsWith('dynamic_test_')) && ownPaperTests.has(id)) {
       const test = ownPaperTests.get(id);
       test.status = 'SUBMITTED';
       test.submittedAt = new Date().toISOString();

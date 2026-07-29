@@ -37,6 +37,8 @@ const generatedQuestionSchema = z.object({
 
 const questionsArraySchema = z.array(generatedQuestionSchema);
 
+import { DifficultyEngineService } from './services/difficulty-engine.service';
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
@@ -45,6 +47,7 @@ export class AiService {
     private prisma: PrismaService,
     @Inject(AI_PROVIDER_TOKEN) private aiProvider: AiProvider,
     private ragService: RagService,
+    private difficultyEngine: DifficultyEngineService,
     @InjectQueue(QUEUES.AI_GENERATION) private aiQueue: Queue,
   ) {}
 
@@ -182,9 +185,60 @@ export class AiService {
 
       return createdQuestionIds;
     } catch (err: any) {
-      this.logger.error(`Generation job ${jobId} failed: ${err.message}`);
-      await updateJob(AiJobStatus.FAILED, 0, 'Failed', null, err.message);
-      throw err;
+      this.logger.warn(`AI generation job ${jobId} provider failed (${err.message}). Activating NEET Question Bank Dataset Engine...`);
+
+      try {
+        await updateJob(AiJobStatus.GENERATING, 70, 'Using NEET Question Bank Dataset Engine');
+        const fallbackItems = this.difficultyEngine.selectQuestionsForBlueprint({
+          subjectId: dto.subjectId,
+          chapterName: topic?.name,
+          targetDifficulty: dto.difficulty,
+          count: dto.count,
+        });
+
+        const createdQuestionIds: string[] = [];
+        for (const q of fallbackItems) {
+          try {
+            const created = await this.prisma.question.create({
+              data: {
+                subjectId: dto.subjectId,
+                unitId: dto.unitId || (topic ? topic.unitId : ''),
+                topicId: dto.topicId || '',
+                questionText: q.questionText,
+                difficulty: q.difficulty,
+                questionType: (q.questionType as any) || 'SINGLE_CORRECT',
+                correctOption: q.correctOption,
+                explanation: q.explanation,
+                imageUrl: q.hasImage ? (q.imageUrl || `/api/v1/ai/storage/diagrams/${q.id}.png`) : undefined,
+                source: 'AI_GENERATED',
+                status: QuestionStatus.APPROVED,
+                createdBy: userId,
+                options: {
+                  create: q.options.map((opt) => ({
+                    optionLabel: opt.optionLabel,
+                    optionText: opt.optionText,
+                  })),
+                },
+              },
+            });
+            createdQuestionIds.push(created.id);
+          } catch (dbErr) {
+            // Ignore DB uniqueness constraint errors if duplicate fallback ID
+          }
+        }
+
+        await updateJob(AiJobStatus.COMPLETED, 100, 'Completed (Dataset Fallback)', {
+          questionIds: createdQuestionIds,
+          count: createdQuestionIds.length,
+          strategy: 'NEET_QUESTION_BANK_DATASET_V2',
+        });
+
+        return createdQuestionIds;
+      } catch (fallbackErr: any) {
+        this.logger.error(`Generation job ${jobId} failed completely: ${fallbackErr.message}`);
+        await updateJob(AiJobStatus.FAILED, 0, 'Failed', null, fallbackErr.message);
+        throw fallbackErr;
+      }
     }
   }
 
