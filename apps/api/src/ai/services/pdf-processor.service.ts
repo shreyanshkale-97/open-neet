@@ -1,9 +1,47 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createCanvas } from '@napi-rs/canvas';
 
-// pdfjs-dist legacy build for Node.js
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.mjs');
+// Lazy dynamic load of @napi-rs/canvas to prevent native DLL loading crash on platforms with App Control policies
+let createCanvasFn: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const canvasMod = require('@napi-rs/canvas');
+  createCanvasFn = canvasMod.createCanvas;
+} catch (e: any) {
+  console.warn('[PdfProcessorService] Native canvas module @napi-rs/canvas not available:', e?.message || e);
+}
+
+function safeCreateCanvas(w: number, h: number): any {
+  if (typeof createCanvasFn === 'function') {
+    return createCanvasFn(w, h);
+  }
+  throw new Error('Native canvas rendering is not supported on this platform/environment.');
+}
+
+// Polyfill DOMMatrix for Node.js if @napi-rs/canvas is missing native bindings
+if (typeof (globalThis as any).DOMMatrix === 'undefined') {
+  (globalThis as any).DOMMatrix = class DOMMatrix {
+    a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+    constructor(init?: any) {
+      if (Array.isArray(init) && init.length >= 6) {
+        this.a = init[0]; this.b = init[1]; this.c = init[2];
+        this.d = init[3]; this.e = init[4]; this.f = init[5];
+      }
+    }
+  };
+}
+
+let pdfjsLibInstance: any = null;
+function getPdfjsLib(): any {
+  if (!pdfjsLibInstance) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      pdfjsLibInstance = require('pdfjs-dist/legacy/build/pdf.mjs');
+    } catch (e: any) {
+      console.warn('[PdfProcessorService] pdfjs-dist module load error:', e?.message || e);
+    }
+  }
+  return pdfjsLibInstance;
+}
 
 export interface PageBatch {
   pages: Buffer[];           // PNG buffers (used when mode = 'vision')
@@ -33,7 +71,7 @@ export class PdfProcessorService {
     const startTime = Date.now();
 
     const pdfData = new Uint8Array(pdfBuffer);
-    const pdfDoc = await pdfjsLib.getDocument({
+    const pdfDoc = await getPdfjsLib().getDocument({
       data: pdfData,
       useWorkerFetch: false,
       isEvalSupported: false,
@@ -112,7 +150,7 @@ export class PdfProcessorService {
    */
   async getPageCount(pdfBuffer: Buffer): Promise<number> {
     const pdfData = new Uint8Array(pdfBuffer);
-    const pdfDoc = await pdfjsLib.getDocument({
+    const pdfDoc = await getPdfjsLib().getDocument({
       data: pdfData,
       useWorkerFetch: false,
       isEvalSupported: false,
@@ -133,7 +171,7 @@ export class PdfProcessorService {
     const width = Math.round(viewport.width);
     const height = Math.round(viewport.height);
 
-    const canvas = createCanvas(width, height);
+    const canvas = safeCreateCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
     ctx.fillStyle = '#FFFFFF';
@@ -154,7 +192,7 @@ export class PdfProcessorService {
   async renderPageToPngByPageNum(pdfBuffer: Buffer, pageNumber: number, scale = 2.0): Promise<Buffer | null> {
     try {
       const pdfData = new Uint8Array(pdfBuffer);
-      const pdfDoc = await pdfjsLib.getDocument({
+      const pdfDoc = await getPdfjsLib().getDocument({
         data: pdfData,
         useWorkerFetch: false,
         isEvalSupported: false,
@@ -181,7 +219,7 @@ export class PdfProcessorService {
   ): Promise<Buffer | null> {
     try {
       const pdfData = new Uint8Array(pdfBuffer);
-      const pdfDoc = await pdfjsLib.getDocument({
+      const pdfDoc = await getPdfjsLib().getDocument({
         data: pdfData,
         useWorkerFetch: false,
         isEvalSupported: false,
@@ -195,7 +233,7 @@ export class PdfProcessorService {
       const width = Math.round(viewport.width);
       const fullHeight = Math.round(viewport.height);
 
-      const fullCanvas = createCanvas(width, fullHeight);
+      const fullCanvas = safeCreateCanvas(width, fullHeight);
       const ctx = fullCanvas.getContext('2d');
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, width, fullHeight);
@@ -215,7 +253,7 @@ export class PdfProcessorService {
       const yStart = topHeaderOffset + Math.max(0, questionIndexOnPage * sliceHeight);
       const cropHeight = Math.min(sliceHeight + 80, fullHeight - yStart);
 
-      const cropCanvas = createCanvas(width, cropHeight);
+      const cropCanvas = safeCreateCanvas(width, cropHeight);
       const cropCtx = cropCanvas.getContext('2d');
       cropCtx.fillStyle = '#FFFFFF';
       cropCtx.fillRect(0, 0, width, cropHeight);

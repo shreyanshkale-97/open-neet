@@ -4,7 +4,7 @@ import {
   BankQuestionItem,
   NEET_QUESTION_BANK_DATASET,
 } from '../datasets/neet-question-bank.dataset';
-import { QuestionStatus } from '@prisma/client';
+import { QuestionStatus, QuestionSource } from '@prisma/client';
 
 export interface HuggingFaceRowItem {
   question: string;
@@ -136,7 +136,7 @@ export class HuggingFaceDatasetService {
             questionType: q.questionType as any,
             correctOption: q.correctOption,
             explanation: q.explanation,
-            source: 'HUGGING_FACE_DATASET',
+            source: QuestionSource.AI_GENERATED,
             status: QuestionStatus.APPROVED,
             options: {
               create: q.options.map((opt) => ({

@@ -79,6 +79,16 @@ export class OwnPaperController {
     return progress;
   }
 
+  @Get('own-paper/:testId/answer-key')
+  @Version('1')
+  async getPaperAnswerKey(@Param('testId') testId: string) {
+    const data = this.ownPaperService.getAnswerKey(testId);
+    return {
+      status: 'SUCCESS',
+      data,
+    };
+  }
+
   // Public endpoint for diagram images with robust question-number fallback matching
   @Get('storage/diagrams/:filename')
   @Version('1')
@@ -118,6 +128,15 @@ export class OwnPaperController {
   }
 
   // NMC NEET UG 2026/2027 Official Syllabus & Weightage Data Endpoint
+  @Get('syllabus/neet-2027/summary')
+  @Version('1')
+  async getNeet2027SyllabusSummaryEndpoint() {
+    return {
+      status: 'SUCCESS',
+      summary: getNeet2027SyllabusSummary(),
+    };
+  }
+
   @Get('syllabus/neet-2027')
   @Version('1')
   async getNeet2027Syllabus() {
@@ -126,15 +145,6 @@ export class OwnPaperController {
       syllabusVersion: 'NEET_UG_2026_2027_NMC_NCERT_v1',
       summary: getNeet2027SyllabusSummary(),
       subjects: NEET_2027_SYLLABUS,
-    };
-  }
-
-  @Get('syllabus/neet-2027/summary')
-  @Version('1')
-  async getNeet2027SyllabusSummaryEndpoint() {
-    return {
-      status: 'SUCCESS',
-      summary: getNeet2027SyllabusSummary(),
     };
   }
 

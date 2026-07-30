@@ -50,7 +50,7 @@ export const AiGeneratorPage: React.FC = () => {
     });
 
     // Fetch official NMC NEET 2027 syllabus dataset
-    fetch('http://localhost:3000/api/v1/ai/syllabus/neet-2027')
+    fetch('/api/v1/ai/syllabus/neet-2027')
       .then((res) => res.json())
       .then((data) => {
         if (data && data.subjects) {

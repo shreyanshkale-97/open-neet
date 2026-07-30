@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, FileText, CheckCircle, Brain, ArrowRight, Loader2, AlertTriangle, Layers, HelpCircle, Cpu } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Brain, ArrowRight, Loader2, AlertTriangle, Layers, HelpCircle, Cpu, Key } from 'lucide-react';
 import { ownPaperApi } from '../services/api';
+import { AnswerKeyModal } from '../components/AnswerKeyModal';
 
 type ProcessingStep = 'idle' | 'uploading' | 'extracting' | 'validating' | 'done' | 'error';
 
@@ -18,6 +19,7 @@ export const OwnPaperModePage: React.FC = () => {
   const [extractedCount, setExtractedCount] = useState<number>(0);
   const [result, setResult] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
   
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -405,27 +407,57 @@ export const OwnPaperModePage: React.FC = () => {
             </div>
           </div>
 
-          <button
-            onClick={handleStartTest}
-            style={{
-              width: '100%',
-              padding: '1rem',
-              background: 'linear-gradient(135deg, #6366F1, #4F46E5)',
-              border: 'none',
-              borderRadius: '10px',
-              color: '#FFF',
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-            }}
-          >
-            Start NTA Exam Simulator <ArrowRight size={20} />
-          </button>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowKeyModal(true)}
+              style={{
+                flex: 1,
+                minWidth: '200px',
+                padding: '1rem',
+                background: '#1E293B',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                borderRadius: '10px',
+                color: '#10B981',
+                fontSize: '1rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.6rem',
+              }}
+            >
+              <Key size={20} /> View Official Answer Key
+            </button>
+
+            <button
+              onClick={handleStartTest}
+              style={{
+                flex: 2,
+                minWidth: '240px',
+                padding: '1rem',
+                background: 'linear-gradient(135deg, #6366F1, #4F46E5)',
+                border: 'none',
+                borderRadius: '10px',
+                color: '#FFF',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+              }}
+            >
+              Start NTA Exam Simulator <ArrowRight size={20} />
+            </button>
+          </div>
         </div>
+      )}
+
+      {/* Answer Key & NCERT Solutions Modal */}
+      {showKeyModal && result?.testId && (
+        <AnswerKeyModal testId={result.testId} onClose={() => setShowKeyModal(false)} />
       )}
     </div>
   );

@@ -61,6 +61,7 @@ export const ownPaperApi = {
       },
     }),
   getProgress: (jobId: string) => api.get(`/ai/own-paper/progress/${jobId}`),
+  getAnswerKey: (testId: string) => api.get(`/ai/own-paper/${testId}/answer-key`),
 };
 
 export const testsApi = {
